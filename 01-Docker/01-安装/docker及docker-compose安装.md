@@ -133,11 +133,32 @@ systemctl enable docker &&
 systemctl status docker
 ```
 
+### 重要配置
+
+- 配置镜像仓库加速器（阿里云），提升获取Docker官方镜像的速度
+
+- Live Restore Enabled：重启docker，但不重启容器
+- 生产环境最好独立挂载SSD硬盘
+
+```shell
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+    },
+  "storage-driver": "overlay2",
+  "registry-mirrors": ["https://ohdpuoqu.mirror.aliyuncs.com"],
+  "live-restore": true
+}
+EOF
+```
+
 ## Docker-compose安装
 
 > 官方安装指南：[Install Docker Compose](https://docs.docker.com/compose/install/)
 
-- 下载并安装[docker-compose](https://github.com/docker/compose/releases/)
+- 下载并安装[docker-compose](https://github.com/docker/compose/releases/)，建议安装1.x的最后一个版本，2.x版本资源限制似乎未生效
 
 ```shell
 # 可连接github，直接一键安装
