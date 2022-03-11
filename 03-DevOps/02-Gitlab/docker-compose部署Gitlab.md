@@ -1,4 +1,4 @@
-# docker-compose安装gitlab
+# docker-compose部署Gitlab
 
 > 参考官方安装方法：[Install GitLab using Docker Compose](https://docs.gitlab.com/ee/install/docker.html#install-gitlab-using-docker-compose)
 
