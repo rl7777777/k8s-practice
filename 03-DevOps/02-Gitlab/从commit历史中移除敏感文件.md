@@ -12,7 +12,7 @@
 
 ```shell
 git filter-branch --force --index-filter \
-'git rm - --cached --ignore-unmatch ./k8s-practice/03-DevOps/02-Gitlab/docker-compose部署Gitlab.md' \
+'git rm --cached --ignore-unmatch ./03-DevOps/02-Gitlab/docker-compose部署Gitlab.md' \
 --prune-empty --tag-name-filter cat -- --all
 ```
 
@@ -22,7 +22,7 @@ git filter-branch --force --index-filter \
 
 ```shell
 # 将之前备份的文件copy回来
-git add /k8s-practice/03-DevOps/02-Gitlab/docker-compose部署Gitlab.md
+git add ./03-DevOps/02-Gitlab/docker-compose部署Gitlab.md
 ```
 
 ### 覆盖commit（作用于所有分支）
