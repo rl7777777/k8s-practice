@@ -12,7 +12,7 @@
 
 ```shell
 git filter-branch --force --index-filter \
-'git rm -f --cached --ignore-unmatch ./k8s-practice/03-DevOps/02-Gitlab/docker-compose部署Gitlab.md' \
+'git rm - --cached --ignore-unmatch ./k8s-practice/03-DevOps/02-Gitlab/docker-compose部署Gitlab.md' \
 --prune-empty --tag-name-filter cat -- --all
 ```
 
