@@ -1,138 +1,89 @@
-# 安装Nginx
+# docker-compose部署Nginx
 
 docker挂载文件时会覆盖掉容器里面的目录，因此需准备一份默认的配置文件
 
-## docker直接启动
+## 准备配置文件
+
+- 临时启动nginx容器，拷出默认配置文件
 
 ```shell
 # 启动nginx
-docker run -d --name nginx -p 80:80 nginx:latest
+docker run -d --name tmp-nginx nginx:latest
 
 # 拷出默认配置文件
 mkdir -p /root/nginx/{config,data,logs}
-docker cp nginx:/etc/nginx /root/nginx/config/ 
-docker cp nginx:/usr/share/nginx/html /root/nginx/data/
-docker cp nginx:/var/log/nginx /root/nginx/logs/ 
+docker cp tmp-nginx:/etc/nginx /root/nginx/config/ 
+docker cp tmp-nginx:/usr/share/nginx/html /root/nginx/data/
+docker cp tmp-nginx:/var/log/nginx /root/nginx/logs/ 
+```
 
-# 持久化
-docker run --name nginx -p 80:80 \
+- 删除临时容器
+
+```shell
+docker rm -f tmp-nginx
+```
+
+## docker方式启动
+
+- 持久化目录须为绝对路径
+
+```shell
+docker run -d --name nginx -p 80:80 \
 -v /root/nginx/config/nginx/:/etc/nginx \
 -v /root/nginx/data/html:/usr/share/nginx/html \
 -v /root/nginx/logs/:/var/log/nginx \
--d nginx:latest
+nginx:latest
 ```
 
-## docker-compose
+- 测试，修改欢迎页面
 
 ```
+cd /root/nginx/data/html
+echo "hello nginx" > index.html
+```
+
+- 访问
+
+![image-20220311093150528](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220311093150.png)
+
+## docker-compose方式启动
+
+- 进入工作目录`/root/nginx`，创建docker-compose编排文件（挂载目录一致）
+
+```shell
 vim docker-compose.yml
 ```
 
 ```yaml
-version: '3.1'
+version: '3'
 services:
-  api-server-nginx:
+  nginx:
     image: nginx         # 镜像
-    container_name: api-server-nginx # 容器名
+    container_name: nginx # 容器名
     restart: always      # 开机自动重启
     ports:               # 端口号绑定（宿主机:容器内）
-      - 16443:16443
-    privileged: true
+      - 80:80
     volumes:             # 目录映射（宿主机:容器内）
-      - ./volumes/config/nginx/:/etc/nginx
-      - ./volumes/data/html:/usr/share/nginx/html
-      - ./volumes/logs/:/var/log/nginx
+      - ./config/nginx/:/etc/nginx
+      - ./data/html:/usr/share/nginx/html
+      - ./logs/:/var/log/nginx
 ```
 
-```
-mkdir -p ./volumes/{config,data,logs}
+- 启动
 
-docker cp api-server-nginx:/etc/nginx ./volumes/config/ 
-docker cp api-server-nginx:/usr/share/nginx/html ./volumes/data/
-docker cp api-server-nginx:/var/log/nginx ./volumes/logs/ 
+```shell
+docker-compose up -d
 ```
 
-```
-user  nginx;
-worker_processes  4;
+- 停止
 
-error_log  /var/log/nginx/error.log warn;
-pid        /var/run/nginx.pid;
-
-
-events {
-    worker_connections  1024;
-}
-
-stream {
-
-    log_format  main  '$remote_addr $upstream_addr - [$time_local] $status $upstream_bytes_sent';
-
-    access_log  /var/log/nginx/k8s-access.log  main;
-
-    upstream k8s-apiserver {
-                server 172.16.2.11:6443;
-                server 172.16.2.12:6443;
-                server 172.16.2.13:6443;
-            }
-
-    server {
-       listen 16443;
-       proxy_pass k8s-apiserver;
-    }
-}
-
-
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log  /var/log/nginx/access.log  main;
-
-    sendfile        on;
-    #tcp_nopush     on;
-
-    keepalive_timeout  65;
-
-    #gzip  on;
-
-    include /etc/nginx/conf.d/*.conf;
-}
+```shell
+docker-compose down
 ```
 
-- 健康检查脚本
+- 若修改配置，需重新创建容器
 
-```
-cd /etc/keepalived
-vim check_nginx.sh
-chmod+x
+```shell
+docker-compose up -d --force-recreate
 ```
 
-```
-#!/bin/bash
-
-count=$(docker ps -a|grep api-server-nginx | grep Up|wc -l)  # 查docker中api-server-nginx容器是否正常运行
-
-if [ "$count" -eq 0 ];then
-    exit 1
-else
-    exit 0
-fi
-```
-
-- nginx
-
-```
-docker run --name nginx -d -p 80:80 nginx:latest
-```
-
-```
-scp -r ha 172.16.2.12:/root/
-scp /usr/local/bin/docker-compose 172.16.2.12:/usr/local/bin/
-```
-
-### 

@@ -383,7 +383,7 @@ alertmanagerFiles:
     receivers:
       - name: email
         email_configs:
-        - to: '228801203@qq.com'
+        - to: 'x@qq.com'
           headers: {"subject":'{{ template "email.header" . }}'}
           html: '{{ template "email.html" . }}'
           send_resolved: true            # 发送报警解除邮件
