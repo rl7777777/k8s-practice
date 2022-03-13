@@ -11,13 +11,13 @@
 
 ### Namespace
 
-```
+```shell
 kubectl create namespace flink-session
 ```
 
 ### RBAC
 
-```
+```shell
 kubectl create serviceaccount flink-service-account -n flink-session
 kubectl create clusterrolebinding flink-role-binding-flink \
     --clusterrole=edit \
@@ -26,36 +26,22 @@ kubectl create clusterrolebinding flink-role-binding-flink \
 
 ### PV&PVC
 
-- 创建目录
+- 提前创建目录并设置权限
 
-```
-# Linux系统挂载NFS文件系统
-sudo yum install nfs-utils
-
-sudo mount -t nfs -o vers=4,minorversion=0,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport 9c7844a78b-adc84.cn-zhangjiakou.nas.aliyuncs.com:/ /mnt  
-
-cd /mnt
-
-# 提前创建目录并设置用权限
-mkdir -p flink2/{upload,recovery,checkpoints}
-chown -R 9999:9999 flink/
-```
-
-- 开发服
-
-```
-# 提前创建目录并设置用权限
+```shell
+# 进入nfs节点的挂载目录
+cd /data/nfs
 mkdir -p flink-session/{upload,recovery,checkpoints}
 chown -R 9999:9999 flink-session/
 ```
 
 - 创建PV&PVC
 
-```
+```shell
 vim 1-flink-static-pv_pvc.yaml
 ```
 
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -69,7 +55,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   nfs:
     path: /data/nfs/flink-session
-    server: 10.2.46.151
+    server: master01
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -87,7 +73,7 @@ spec:
 
 ### Configmap
 
-```
+```shell
 vim 2-flink-configuration-configmap.yaml
 ```
 
@@ -166,11 +152,9 @@ data:
     logger.netty.level = OFF  
 ```
 
-
-
 ### Jobmanager
 
-```
+```shell
 vim 3-jobmanager-session-deployment-ha.yaml
 ```
 
@@ -246,7 +230,7 @@ spec:
 
 ### Taskmanager
 
-```
+```shell
 vim 4-taskmanager-session-deployment.yaml
 ```
 
@@ -299,70 +283,27 @@ spec:
             path: log4j-console.properties
 ```
 
-```
+```shell
 vim 5-jobmanager-rest-service.yaml 
 ```
 
-```
+```yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: flink-jobmanager-rest
   namespace: flink-session
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
   - name: rest
     port: 8081
     targetPort: 8081
+    nodePort: 30081
   selector:
     app: flink-session
     component: jobmanager
 ```
 
-```
-cat 6-taskmanager-ingress.yaml 
-```
 
-```
-apiVersion: networking.k8s.io/v1beta1
-kind: Ingress
-metadata:
-  name: flink-session
-  namespace: flink-session
-spec:
-  rules:
-  - host: flink-session.l2c.cn
-    http:
-      paths:
-      - backend:
-          serviceName: flink-jobmanager-rest
-          servicePort: 8081
-```
-
-- prometheus
-
-```
-./bin/flink run-application -p 8 -t kubernetes-application \
-  -Dkubernetes.cluster-id=my-first-cluster \
-  -Dtaskmanager.memory.process.size=2048m \
-  -Dkubernetes.taskmanager.cpu=2 \
-  -Dtaskmanager.numberOfTaskSlots=4 \
-  -Dkubernetes.container.image=iyacontrol/flink-world-count:v0.0.2 \
-  -Dkubernetes.container.image.pull-policy=Always \
-  -Dkubernetes.namespace=stream \
-  -Dkubernetes.jobmanager.service-account=flink \
-  -Dkubernetes.rest-service.exposed.type=LoadBalancer \
-  -Dkubernetes.rest-service.annotations=service.beta.kubernetes.io/aws-load-balancer-type:nlb,service.beta.kubernetes.io/aws-load-balancer-internal:true \
-  -Dkubernetes.jobmanager.annotations=prometheus.io/scrape:true,prometheus.io/port:9249 \
-  -Dkubernetes.taskmanager.annotations=prometheus.io/scrape:true,prometheus.io/port:9249 \
-  -Dmetrics.reporters=prom \
-  -Dmetrics.reporter.prom.class=org.apache.flink.metrics.prometheus.PrometheusReporter \
-  local:///opt/flink/usrlib/my-flink-job.jar
-  
-metrics.reporter.promgateway.class: org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporter
-kubernetes.jobmanager.annotations: prometheus.io/scrape:true,prometheus.io/port:9249
-kubernetes.taskmanager.annotations: prometheus.io/scrape:true,prometheus.io/port:9249
-metrics.reporters=prom
-```
 
