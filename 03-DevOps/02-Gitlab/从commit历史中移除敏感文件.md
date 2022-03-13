@@ -8,7 +8,7 @@
 
 ### 执行git filter-branch
 
-其中，PATH-TO-YOUR-FILE-WITH-SENSITIVE-DATA 是你需要删除的敏感信息文件名
+其中，PATH-TO-YOUR-FILE-WITH-SENSITIVE-DATA 是你需要删除的敏感信息文件名，执行此操作将会删除该文件，因此请先备份
 
 ```shell
 git filter-branch --force --index-filter \
@@ -16,7 +16,7 @@ git filter-branch --force --index-filter \
 --prune-empty --tag-name-filter cat -- --all
 ```
 
-![image-20220313132910687](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203131329757.png)
+![image-20220313135805715](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203131358788.png)
 
 ### 将备份文件导回并add
 
