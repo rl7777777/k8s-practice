@@ -1,4 +1,5 @@
-腾讯云自建k8s对接文件存储CFS（待完善）
+# 腾讯云自建k8s对接文件存储CFS
+
 ## 环境
 
 服务器：轻量应用服务器，使用私有网络VPC，需关联云联网实现内网互联
@@ -42,7 +43,7 @@ sudo mount -t nfs -o vers=4.0,noresvport 172.16.0.10:/ /localfolder
 
 创建子用户，并授权文件存储全读写访问权限，记录API密钥
 
-```
+```shell
 SecretId AKID4xaw2rRknZ4IFvKSJtCEzUifLksjKfkY 
 SecretKey xxxxxxxxxxxxxxxxxxxxxxx
 ```
@@ -53,13 +54,13 @@ SecretKey xxxxxxxxxxxxxxxxxxxxxxx
 
 - rbac
 
-```
+```shell
 kubectl apply -f  deploy/cfs/kubernetes/csi-cfs-rbac.yaml
 ```
 
 - 根据k8s版本安装相应版本的插件，将API密钥填充至`csi-provisioner-cfsplugin.yaml`文件中
 
-```
+```shell
 kubectl apply -f  deploy/cfs/kubernetes/csi-cfs-csidriver-old.yaml
 kubectl apply -f  deploy/cfs/kubernetes/csi-nodeplugin-cfsplugin-new.yaml
 kubectl apply -f  deploy/cfs/kubernetes/csi-provisioner-cfsplugin-new.yaml
@@ -69,17 +70,17 @@ kubectl apply -f  deploy/cfs/kubernetes/csi-provisioner-cfsplugin-new.yaml
 
 - 创建web目录
 
-```
+```shell
 mkdir -p /localfolder/web
 ```
 
 - static-allinone
 
-```
+```shell
 vim static-allinone.yaml
 ```
 
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -133,7 +134,7 @@ spec:
 
 - 测试
 
-```
+```shell
 echo "hello cfs" > /localfolder/web/index.html
 ```
 
@@ -193,3 +194,6 @@ spec:
 kubectl apply -f dynamic-provison-allinone.yaml
 ```
 
+- 会自动创建新的cfs，好像这个sc不能直接绑定已有cfs的subpath（待后续研究）
+
+![image-20220314192025136](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203141920253.png)

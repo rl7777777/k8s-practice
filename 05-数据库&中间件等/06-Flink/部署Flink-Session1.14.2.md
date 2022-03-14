@@ -85,6 +85,8 @@ spec:
 
 ### Configmap
 
+- 已集成prometheus监控，若不需要，注释掉即可
+
 ```shell
 vim 2-flink-configuration-configmap.yaml
 ```
@@ -117,6 +119,10 @@ data:
     state.backend: filesystem
     state.checkpoints.dir: file:///opt/flink/checkpoints
     execution.checkpointing.interval: 10s
+    
+    # 集成prometheus监控
+    metrics.reporter.promgateway.class: org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporter
+    
   log4j-console.properties: |+
     # 如下配置会同时影响用户代码和 Flink 的日志行为
     rootLogger.level = INFO
@@ -327,6 +333,16 @@ spec:
 
 ![image-20220314111446862](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314111446.png)
 
+### prometheus配置
+
+- 查看prometheus是否生效
+
+![image-20220314214935720](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142149817.png)
+
+- 导入flink监控面板：[11049](https://grafana.com/grafana/dashboards/11049)
+
+![image-20220314215208946](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142152096.png)
+
 ## 测试
 
 - 从容器中拷出示例demo
@@ -371,7 +387,7 @@ kubectl delete -f 1-flink-static-volume.yaml
 
 - 删除默认空间下根据`kubernetes.cluster-id`创建的一系列configmap，若不删除且不改动id，再次创建集群时仍为原集群。
 
-```
+```shell
 kubectl get configmap  -A | grep 1338 | awk '{print $2};' | xargs kubectl delete configmap
 ```
 
