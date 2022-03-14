@@ -4,8 +4,6 @@
 
 ## 目录
 
-# k8s-practice
-
 * [01-Docker/](/01-Docker)
   * [01-安装/](/01-Docker/01-安装)
     * [docker及docker-compose安装.md](/01-Docker/01-安装/docker及docker-compose安装.md)
@@ -56,13 +54,14 @@
   * [02-Gitlab/](/03-DevOps/02-Gitlab)
     * [docker-compose部署Gitlab.md](/03-DevOps/02-Gitlab/docker-compose部署Gitlab.md)
     * [Gitlab容灾方案.md](/03-DevOps/02-Gitlab/Gitlab容灾方案.md)
+    * [从commit历史中移除敏感文件.md](/03-DevOps/02-Gitlab/从commit历史中移除敏感文件.md)
     * [受保护分支合并冲突问题.md](/03-DevOps/02-Gitlab/受保护分支合并冲突问题.md)
   * [03-Harbor/](/03-DevOps/03-Harbor)
     * [docker-compose安装harbor仓库.md](/03-DevOps/03-Harbor/docker-compose安装harbor仓库.md)
   * [04-SonarQube/](/03-DevOps/04-SonarQube)
     * [Sonarqube安装及Jenkins集成.md](/03-DevOps/04-SonarQube/Sonarqube安装及Jenkins集成.md)
   * [05-测试（未集成）/](/03-DevOps/05-测试（未集成）)
-    * [01-Jmeter分布式压测.md](/03-DevOps/05-测试（未集成）/01-Jmeter分布式压测.md)
+    * [01-K8S中部署分布式Jmeter压测环境.md](/03-DevOps/05-测试（未集成）/01-K8S中部署分布式Jmeter压测环境.md)
     * [02-Sysbench数据库压测.md](/03-DevOps/05-测试（未集成）/02-Sysbench数据库压测.md)
     * [03-Stress系统压测.md](/03-DevOps/05-测试（未集成）/03-Stress系统压测.md)
 * [04-监控&日志告警系统/](/04-监控&日志告警系统)
@@ -99,6 +98,4 @@
     * [01-yum源配置.md](/06-Tools&Tips/Linux/01-yum源配置.md)
     * [02-网卡模式设置.md](/06-Tools&Tips/Linux/02-网卡模式设置.md)
   * [Markdown/](/06-Tools&Tips/Markdown)
-    * [VCCode插件生成编号、目录、文件目录树.md](/06-Tools&Tips/Markdown/VCCode插件生成编号、目录、文件目录树.md)
-* [LICENSE](/LICENSE)
-* [README.md](/README.md)
+    * [VSCode插件生成编号、目录、文件目录树.md](/06-Tools&Tips/Markdown/VSCode插件生成编号、目录、文件目录树.md)

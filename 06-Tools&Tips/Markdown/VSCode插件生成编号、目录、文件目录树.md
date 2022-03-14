@@ -4,13 +4,13 @@
 - [3. 生成文件目录树](#3-生成文件目录树)
   - [3.1. 场景一：生成目录树链接](#31-场景一生成目录树链接)
   - [3.2. 场景二：生成目录树视图](#32-场景二生成目录树视图)
-## 1. 安装VS Code
+## 安装VS Code
 
 > 官方地址：https://code.visualstudio.com/
 
 - 下载安装完毕后在**扩展**中安装中文插件**Chinese (Simplified)**
 
-## 2. Markdown自动生成编号和目录
+## Markdown自动生成编号和目录
 
 - 安装插件**Markdown All in One**
 - 配置插件，将目录起始级别由**1**改为2
@@ -29,9 +29,9 @@
 
 <img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202202201238790.png" alt="image-20220220123858737" width="600" />
 
-## 3. 生成文件目录树
+## 生成文件目录树
 
-### 3.1. 场景一：生成目录树链接
+### 场景一：生成目录树链接
 
 - 安装插件**File Tree to Text Generator**
 - 在文件列表右击，点击**Generate Filetree**，选择Markdown，4级目录。
@@ -40,7 +40,7 @@
 
 <img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202202201517606.png" alt="image-20220220151744559" width="500" />
 
-### 3.2. 场景二：生成目录树视图
+### 场景二：生成目录树视图
 
 - 安装插件**project-tree**
 - 打开MD文档，**右键**--**命令面板**，搜索**project-tree**，点击即在README文档中生成目录树视图
