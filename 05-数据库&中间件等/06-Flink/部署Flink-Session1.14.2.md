@@ -347,7 +347,7 @@ spec:
 
 - 从容器中拷出示例demo
 
-```
+```shell
 jobmanager_pod=`kubectl get po -n flink-session -l component=taskmanager -o jsonpath='{.items[0].metadata.name}'`
 kubectl cp -n flink-session $jobmanager_pod:/opt/flink/examples ./example
 ```
