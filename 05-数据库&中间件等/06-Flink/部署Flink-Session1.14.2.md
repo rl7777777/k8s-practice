@@ -3,9 +3,9 @@
 ## 部署信息
 
 - 官方项目地址：[Flink-Session-HA](https://nightlies.apache.org/flink/flink-docs-release-1.14/zh/docs/deployment/resource-providers/standalone/kubernetes/)
-- Flink版本：1.14.2
+- Flink版本/镜像：apache/flink:1.14.2-scala_2.11
 - 部署架构：1×Jobmanager + 2×Taskmanager，通过持久化recovery,checkpoints实现故障恢复
-- Prometheus监控集成
+- 集成Prometheus监控
 
 ## 部署步骤
 
@@ -18,19 +18,28 @@ kubectl create namespace flink-session
 ### RBAC
 
 ```shell
-kubectl create serviceaccount flink-service-account -n flink-session
+kubectl create serviceaccount flink-service-account -n flink-session &&
 kubectl create clusterrolebinding flink-role-binding-flink \
     --clusterrole=edit \
     --serviceaccount=flink-session:flink-service-account
 ```
 
+### 创建挂载目录
+
+本文使用腾讯云文件存储--静态挂载方式，亦可自行创建nfs
+
 ### PV&PVC
 
-- 提前创建目录并设置权限
+- 将文件存储挂载到本地服务器
 
 ```shell
-# 进入nfs节点的挂载目录
-cd /data/nfs
+sudo mount -t nfs -o vers=4.0,noresvport <Host>:/ /localfolder
+```
+
+- 创建flink目录并配置权限
+
+```shell
+cd /localfolder
 mkdir -p flink-session/{upload,recovery,checkpoints}
 chown -R 9999:9999 flink-session/
 ```
@@ -38,32 +47,35 @@ chown -R 9999:9999 flink-session/
 - 创建PV&PVC
 
 ```shell
-vim 1-flink-static-pv_pvc.yaml
+vim 1-flink-static-volume.yaml
 ```
 
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: flink-session-pv
+  name: flink-cfs-static-pv
 spec:
-  storageClassName: "flink-session"
-  capacity:
-    storage: 10Gi
   accessModes:
   - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  nfs:
-    path: /data/nfs/flink-session
-    server: master01
+  capacity:
+    storage: 10Gi
+  csi:
+    driver: com.tencent.cloud.csi.cfs
+    volumeHandle: flink-cfs-static-pv
+    volumeAttributes: 
+      host: <Host>
+      path: /flink-session
+  storageClassName: ""
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: flink-session-pvc
+  name: flink-cfs-static-pvc
   namespace: flink-session
 spec:
-  storageClassName: "flink-session"
+  storageClassName: ""
+  volumeName: flink-cfs-static-pv
   accessModes:
   - ReadWriteMany
   resources:
@@ -225,7 +237,7 @@ spec:
             path: log4j-console.properties
       - name: flink-pvc
         persistentVolumeClaim:
-          claimName: flink-static-nas-pvc
+          claimName: flink-cfs-static-pvc
 ```
 
 ### Taskmanager
@@ -305,5 +317,62 @@ spec:
     component: jobmanager
 ```
 
+![image-20220314111403107](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314111403.png)
 
+- 查看挂载目录
 
+![image-20220314111550439](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314111550.png)
+
+- 访问控制台
+
+![image-20220314111446862](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314111446.png)
+
+## 测试
+
+- 从容器中拷出示例demo
+
+```
+jobmanager_pod=`kubectl get po -n flink-session -l component=taskmanager -o jsonpath='{.items[0].metadata.name}'`
+kubectl cp -n flink-session $jobmanager_pod:/opt/flink/examples ./example
+```
+
+- 在控制台上传`./example/streaming/WordCount.jar`项目，并提交（Submit）
+
+![image-20220314112507493](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314112507.png)
+
+![image-20220314112523925](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314112524.png)
+
+- 宕机测试，一并删除jobmanager和taskmanager
+
+```shell
+kubectl delete pod -n flink-session -l app=flink-session --force --grace-period=0
+
+# 查看pod创建情况
+kubectl get pod -n flink-session -w
+```
+
+![image-20220314112714274](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314112714.png)
+
+- 创建完毕后，登录控制台，查看任务是否重启
+
+![image-20220314112841735](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314112841.png)
+
+## 清理
+
+- 删除资源（亦可`kubectl delete -f .`一次性删除）
+
+```shell
+kubectl delete -f 5-jobmanager-rest-service.yaml
+kubectl delete -f 4-taskmanager-session-deployment.yaml
+kubectl delete -f 3-jobmanager-session-deployment-ha.yaml
+kubectl delete -f 2-flink-configuration-configmap.yaml
+kubectl delete -f 1-flink-static-volume.yaml
+```
+
+- 删除默认空间下根据`kubernetes.cluster-id`创建的一系列configmap，若不删除且不改动id，再次创建集群时仍为原集群。
+
+```
+kubectl get configmap  -A | grep 1338 | awk '{print $2};' | xargs kubectl delete configmap
+```
+
+![image-20220314114630751](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20220314114630.png)
