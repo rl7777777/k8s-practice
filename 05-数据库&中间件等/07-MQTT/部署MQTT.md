@@ -51,7 +51,7 @@ spec:
   storageClassName: dev-mqtt-nfs
   nfs:
     path: /data/nfs/mqtt/dev
-    server: 10.2.46.151
+    server: master01
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
