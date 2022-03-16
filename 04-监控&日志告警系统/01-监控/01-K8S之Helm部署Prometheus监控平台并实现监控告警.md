@@ -4,26 +4,19 @@
 
 ## 概述
 
-本文采用helm安装Prometheus+Grafana，及数据库&中间件的exporter,并通过配置alertmanager及告警规则监控物理机及各组件的状态，并实现邮件报警。其中所采用的helm仓库及chart包如下所示：
+- 本文采用helm安装Prometheus+Grafana
 
-- helm仓库：
+- 配置alertmanager及告警规则实现邮件报警。
+- 其中所采用的helm仓库及chart包如下所示：
 
 ```shell
+# helm仓库
 grafana: https://grafana.github.io/helm-charts
 prometheus-community: https://prometheus-community.github.io/helm-charts
-```
 
-- chart包：
-
-```shell
+# chart包
 grafana/grafana
-
 prometheus-community/prometheus
-
-prometheus-community/prometheus-mysql-exporter
-prometheus-community/prometheus-redis-exporter
-prometheus-community/prometheus-kafka-exporter
-prometheus-community/prometheus-rabbitmq-exporter
 ```
 
 ## 准备工作
@@ -36,10 +29,10 @@ prometheus-community/prometheus-rabbitmq-exporter
 
 ```shell
 # 下载（自行选择版本）
-wget https://get.helm.sh/helm-v3.7.1-linux-amd64.tar.gz
+wget https://get.helm.sh/helm-v3.8.1-linux-amd64.tar.gz
 
 # 解压
-tar zxvf helm-v3.6.1-linux-amd64.tar.gz
+tar zxvf helm-v3.8.1-linux-amd64.tar.gz
 
 # 安装
 mv linux-amd64/helm /usr/local/bin/
@@ -50,7 +43,7 @@ helm version
 
 - 删除Helm使用时关于kubernetes文件的警告
 
-```
+```shell
 chmod g-rw ~/.kube/config
 chmod o-r ~/.kube/config
 ```
@@ -69,12 +62,14 @@ helm repo update
 helm search repo grafana
 
 # 创建工作目录
-mkdir -p ~/workspace/{grafana,prometheus}
+mkdir -p ~/workspace/prometheus
 
 # 拉取所有的chart包（请放到相应的目录中）
-helm pull grafana/grafana
+cd ~/workspace/prometheus
 
+helm pull grafana/grafana
 helm pull prometheus-community/prometheus
+
 helm pull prometheus-community/prometheus-mysql-exporter
 helm pull prometheus-community/prometheus-redis-exporter
 helm pull prometheus-community/prometheus-kafka-exporter
@@ -88,27 +83,24 @@ tar zxvf [压缩包]
 
 - prometheus内嵌kube-state-metrics安装包，其使用的是gcr镜像，也是所有chart包中唯一的gcr镜像，可能会导致镜像拉取失败，因此有必要提前同步该镜像
 
-![image-20210805172129511](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805172129.png)
+![image-20220314194222118](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203141942167.png)
 
 - 编辑配置文件
 
 > 已同步到个人阿里云镜像仓库
 
 ```shell
-vim ~/workspace/prometheus/prometheus/charts/kube-state-metrics/values.yaml
+cd cd ~/workspace/prometheus/prometheus
+vim charts/kube-state-metrics/values.yaml
 ```
 
 ```shell
 # Default values for kube-state-metrics.
 prometheusScrape: true
 image:
-  repository: registry.cn-zhangjiakou.aliyuncs.com/lc-sc/kube-state-metrics
-  tag: v2.0.0
+  repository: registry.cn-zhangjiakou.aliyuncs.com/gcr-sync/kube-state-metrics
+  tag: v2.3.0
   pullPolicy: IfNotPresent
-```
-
-```
-registry.cn-hangzhou.aliyuncs.com/google_containers/kube-state-metrics/kube-state-metrics:v2.3.0
 ```
 
 ## 安装Prometheus
@@ -132,10 +124,28 @@ vim values.yaml
 /persistentVolume
 
 # 总共有三处，分别为alertmanager，Prometheus server和pushgateway。
-# 参考官方文档建议配置，本文开启alertmanager和Prometheus server的持久化
+# 参考官方文档建议配置，本文仅开启Prometheus server的持久化，其它的关闭
 ```
 
-![image-20210805175106482](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805175106.png)
+注：可能需要设置`runAsUser`为0（root用户）
+
+![image-20220314195221334](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203141952422.png)
+
+### 多副本
+
+- 设置Prometheus server的副本数为3，并开启statefulset
+
+![image-20220314195530022](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203141955066.png)
+
+### 开启NodePort
+
+- Alertmanager，更改ClusterIP为NodePort，并设置nodeport端口号
+
+![image-20220314201129815](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142011856.png)
+
+- Prometheus server，更改ClusterIP为NodePort，并新增nodeport字段
+
+![image-20220314201252481](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142012519.png)
 
 ### 部署
 
@@ -149,71 +159,43 @@ helm install prometheus -n prometheus .
 
 - 部署完查看service，将会在grafana中配置数据源时用到
 
-![image-20210805175834462](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805175834.png)
+![image-20220314203041678](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142030725.png)
 
-### 创建NodePort
+- 访问alertmanager-dashboard：`<Node-IP>:30090`
+- 访问server-dashboard：`<Node-IP>:30091`
 
-> 亦可在values中设置
+### 异常处理
 
-```shell
-vim service-np.yaml
-```
+若server无法启动，日志提示`err="open /data/queries.active: permission denied"`，则需设置`runAsUser`为0（root用户）
 
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus-server-np
-  namespace: prometheus
-spec:
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 9090
-    nodePort: 30090
-  selector:
-    app: prometheus
-    component: server
-    release: prometheus
-  type: NodePort
-```
-
-```shell
-kubectl apply -f service-np.yaml
-```
-
-- 访问prometheus控制台
-
-![image-20210805192132947](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805192132.png)
+![image-20220314203002665](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142030707.png)
 
 ## 安装Grafana
 
+同样安装在prometheus空间下
+
 ### 创建Secret
 
-- 在grafana命名空间下新建secret，帐号密码：admin / grafana
+- 在prometheus命名空间下新建secret，帐号密码：admin / grafana
 
 ```shell
-kubectl create ns grafana
-
+cd ~/workspace/prometheus/grafana
 echo -n "admin" | base64
 echo -n "grafana" | base64
 ```
 
-```shell
-vim secret.yaml
-```
-
 ```yaml
+cat > secret.yaml  <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
   name: grafana
-  namespace: grafana
+  namespace: prometheus
 type: Opaque
 data:
   admin-user: YWRtaW4=
   admin-password: Z3JhZmFuYQ==
+EOF
 ```
 
 ```shell
@@ -226,7 +208,6 @@ kubectl apply -f secret.yaml
 - 建议首次部署时直接修改values中的配置，而不是用--set的方式，这样后期upgrade不必重复设置。
 
 ```shell
-cd  ~/workspace/grafana/grafana
 vim values.yaml
 ```
 
@@ -261,46 +242,23 @@ persistence:
 
 ![image-20210805201847152](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805201847.png)
 
+### 设置NodePort
+
+更改ClusterIP为NodePort，并新增nodeport字段
+
+![image-20220314203958389](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142039441.png)
+
 ### 部署
 
 ```shell
-helm install grafana -n grafana .
-```
-
-### 创建NodePort
-
-> 亦可在values中设置
-
-```shell
-vim service-np.yaml
-```
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana-np
-  namespace: grafana
-spec:
-  ports:
-  - name: service
-    port: 80
-    protocol: TCP
-    targetPort: 3000
-    nodePort: 30130
-  selector:
-    app.kubernetes.io/instance: grafana
-    app.kubernetes.io/name: grafana
-  type: NodePort
-```
-
-```shell
-kubectl apply -f service-np.yaml
+helm install grafana -n prometheus .
 ```
 
 ## 配置dashboard
 
 ### 登录grafana
+
+访问grafana-dashboard：`<Node-IP>:30092`
 
 > 帐号密码（之前自定义的secret）： admin /grafana
 
@@ -321,35 +279,35 @@ kubectl get svc -n prometheus
 
 - 进入Data sources配置页面
 
-![image-20210805202717816](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805202717.png)
+<img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805202717.png" alt="image-20210805202717816" width="500px" />
 
 - 添加Prometheus，URL填入prometheus的service（80端口可省略）
 
-![image-20210805202858810](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203537.png)
+<img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203537.png" alt="image-20210805202858810" width="700px" />
 
 ### 导入dashboard模版
 
 - Data sources配置完成后，导入模版
 
-![image-20210805203008361](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203008.png)
+<img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203008.png" alt="image-20210805203008361" width="400px" />
 
-- 导入模版：8919
+- 导入模版：*Node Exporter for Prometheus Dashboard CN 20201010*（8919）
 
-> 8919：*Node Exporter for Prometheus Dashboard CN v20201010*
->
 > 更多模版请参考官网网站：https://grafana.com/grafana/dashboards
 
-![image-20210805203129789](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203129.png)
+<img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203129.png" alt="image-20210805203129789" width="500px" />
 
 - 数据源选择Prometheus，然后点击import
 
-![image-20210805203220083](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203220.png)
+<img src="https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805203220.png" alt="image-20210805203220083" width="600px" />
 
 - 最终效果：
 
-![image-20210805204720631](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/20210805204720.png)
+![image-20220314205446711](https://lc-tc.oss-cn-shenzhen.aliyuncs.com/lc-images/202203142054917.png)
 
 ## 监控告警功能
+
+配置方法没变化，有时间再更新
 
 ### alertmanager邮箱告警配置
 
