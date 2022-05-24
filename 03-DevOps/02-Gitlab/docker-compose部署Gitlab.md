@@ -110,7 +110,7 @@ services:
         gitlab_rails['time_zone'] = 'Asia/Shanghai'
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
     ports:
-      - '8888:80'      #自定义端口
+      - '8888:8888'      #自定义端口
       - '443:443'
       - '2222:22'    
     volumes:
