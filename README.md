@@ -2,7 +2,13 @@
 
 容器云平台实践：主要包括K8S集群的搭建，DevOps，日志&监控系统，中间件容器化等
 
-## 目录
+## 最近更新
+
+2022-05-31 [Nginx+Consul全容器化动态负载均衡实践](/01-Docker/03-部署示例/Nginx+Consul全容器化动态负载均衡实践.md)
+
+2022-05-31 [Jira+Jenkins+Gitlab自动化交付实践](/03-DevOps/06-Jira/Jira+Jenkins+Gitlab自动化交付实践.md)
+
+## 索引
 
 * [01-Docker/](/01-Docker)
   * [01-安装/](/01-Docker/01-安装)
@@ -64,6 +70,8 @@
     * [01-K8S中部署分布式Jmeter压测环境.md](/03-DevOps/05-测试（未集成）/01-K8S中部署分布式Jmeter压测环境.md)
     * [02-Sysbench数据库压测.md](/03-DevOps/05-测试（未集成）/02-Sysbench数据库压测.md)
     * [03-Stress系统压测.md](/03-DevOps/05-测试（未集成）/03-Stress系统压测.md)
+  * [06-Jira/](/03-DevOps/06-Jira)
+    * [Jira+Jenkins+Gitlab自动化交付实践.md](/03-DevOps/06-Jira/Jira+Jenkins+Gitlab自动化交付实践.md)
 * [04-监控&日志告警系统/](/04-监控&日志告警系统)
   * [01-监控/](/04-监控&日志告警系统/01-监控)
     * [01-K8S之Helm部署Prometheus监控平台并实现监控告警.md](/04-监控&日志告警系统/01-监控/01-K8S之Helm部署Prometheus监控平台并实现监控告警.md)
